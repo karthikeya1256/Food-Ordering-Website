@@ -31,6 +31,16 @@ input {
 
 .navbar-brand {
   letter-spacing: -0.5px;
+  text-decoration: none;
+  margin-bottom: 0;
+  font-size: 40px;
+  font-weight: 800;
+}
+.brand-logo{
+  width: 88px;
+  height:100px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .hero {
@@ -53,12 +63,12 @@ input {
   box-shadow: 0 10px 28px #203b2912 !important;
 }
 
-.food-emoji {
-  min-height: 135px;
-  display: grid;
-  place-items: center;
+.food-image {
+  width: 100%;
+  height: 180px;
+  display: block;
+  object-fit: cover;
   background: #edf5ed;
-  font-size: 4rem;
 }
 
 .card {
@@ -83,12 +93,6 @@ input {
     font-size: 0.85rem;
   }
 }
-
-
-/* .navbar .btn {
-  padding-inline: 10px;
-  font-size: 0.85rem;
-} */
 
 
 

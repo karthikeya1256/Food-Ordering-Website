@@ -2,10 +2,81 @@
 import { useState } from "react";
 
 const initialFoods = [
-  { id: 1, name: "Veg Fried Rice", category: "Lunch", price: 100, emoji: "🍚" },
-  { id: 2, name: "Paneer Wrap", category: "Snacks", price: 80, emoji: "🌯" },
-  { id: 3, name: "Masala Dosa", category: "Breakfast", price: 60, emoji: "🥞" },
-  { id: 4, name: "Fresh Fruit Bowl", category: "Healthy", price: 70, emoji: "🍓" },
+  { 
+    id: 1, 
+    name: "Veg Fried Rice", 
+    category: "Lunch", 
+    price: 100, 
+    image:"/fried-rice.png",
+  },
+  { 
+    id: 2, 
+    name: "Paneer Wrap", 
+    category: "Snacks", 
+    price: 80, 
+    image:"/paneer-wrap.png", 
+  },
+  { 
+    id: 3,
+    name: "Masala Dosa",
+    category: "Breakfast",
+    price: 60, image:"/masala-dosa.png",
+  },
+  { 
+    id: 4, 
+    name: "Fresh Fruit Bowl",
+    category: "Healthy", 
+    price: 70,
+    image:"/fruit-bowl.png", 
+  },
+  {id: 5, 
+    name: "whey protein shake",
+    category: "Healthy", 
+    price: 170,
+    image:"/whey-protein.png", 
+  },
+  {id: 6, 
+    name: "Chicken Biryani",
+    category: "Lunch", 
+    price: 120,
+    image:"/biryani.png", 
+  },
+  {id: 7, 
+    name: "Samosa",
+    category: "Snacks", 
+    price: 30,
+    image:"/samosa.png", 
+  },
+  {id: 8, 
+    name: "Idly",
+    category: "Breakfast", 
+    price: 45,
+    image:"/idly.png", 
+  },
+  {id: 9, 
+    name: "Poori",
+    category: "Breakfast", 
+    price: 50,
+    image:"/poori.png", 
+  },
+  {id: 10, 
+    name: "Wada",
+    category: "Breakfast", 
+    price: 50,
+    image:"/wada.png", 
+  },
+  {id: 11, 
+    name: "Tea",
+    category: "", 
+    price: 25,
+    image:"/tea.png", 
+  },
+  {id: 12, 
+    name: "Coffee",
+    category: "", 
+    price: 35,
+    image:"/coffee.png", 
+  },
 ];
 
 const initialOrders = [
@@ -100,6 +171,11 @@ function App() {
     <div className="app-shell">
       <header className="navbar navbar-expand bg-white border-bottom px-3 px-md-5">
         <a className="navbar-brand fw-bold text-success" href="#home">
+          <img
+            src="/food-logo.png"
+            alt="OfficeBite Logo"
+            className="brand-logo"
+            />
           OfficeBite..
         </a>
 
@@ -156,7 +232,13 @@ function App() {
               {initialFoods.map((food) => (
                 <div className="col-12 col-sm-6 col-lg-3" key={food.id}>
                   <div className="card food-card h-100 border-0 shadow-sm">
-                    <div className="food-emoji">{food.emoji}</div>
+                    
+                    <img 
+                    src={food.image}
+                    alt={food.name}
+                    className="food-image"
+                    />
+
                     <div className="card-body d-flex flex-column">
                       <span className="small text-success fw-semibold">
                         {food.category}
@@ -359,7 +441,7 @@ function App() {
       </main>
 
       <footer className="text-center text-secondary py-4">
-        OfficeBite · Office Food Ordering System
+        OfficeBite..
       </footer>
     </div>
   );
