@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState } from "react"; 
 
 const initialFoods = [
   { 
@@ -101,6 +100,8 @@ function App() {
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState(initialOrders);
   const [message, setMessage] = useState("");
+  const [showPaymentPage, setShowPaymentPage] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("UPI");
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const total = cart.reduce(
@@ -138,26 +139,32 @@ function App() {
     );
   }
 
-  function placeOrder() {
-    if (cart.length === 0) {
-      setMessage("Please add food to your cart first.");
-      return;
-    }
-
-    const newOrder = {
-      id: Date.now(),
-      employee: "Demo Employee",
-      items: cart.map(
-        (item) => `${item.name} × ${item.quantity}`
-      ),
-      total,
-      status: "PLACED",
-    };
-
-    setOrders((current) => [newOrder, ...current]);
-    setCart([]);
-    setMessage(`Demo order #${newOrder.id} placed successfully!`);
+  
+function placeOrder() {
+  if (cart.length === 0) {
+    setMessage("Please add food to your cart first.");
+    setShowPaymentPage(false);
+    return;
   }
+
+  const newOrder = {
+    id: Date.now(),
+    employee: "Demo Employee",
+    items: cart.map(
+      (item) => `${item.name} × ${item.quantity}`
+    ),
+    total,
+    status: "PLACED",
+    paymentMethod,
+    paymentStatus: "PAID",
+  };
+
+  setOrders((current) => [newOrder, ...current]);
+  setCart([]);
+  setShowPaymentPage(false);
+  setMessage(`Demo payment successful! Order #${newOrder.id} placed.`);
+}
+
 
   function updateStatus(id, status) {
     setOrders((current) =>
@@ -196,8 +203,79 @@ function App() {
       </header>
 
       <main className="container py-4 py-md-5">
-        {view === "customer" ? (
-          <>
+      {view === "customer" ? (
+  showPaymentPage ? (
+    <section className="payment-page">
+      <button
+        type="button"
+        className="btn btn-outline-success mb-4"
+        onClick={() => setShowPaymentPage(false)}
+      >
+        ← Back to Menu
+      </button>
+
+      <div className="payment-card">
+        <h1>OfficeBite Payment</h1>
+        <p className="text-secondary">
+          Review your order and select a demo payment method.
+        </p>
+
+        <div className="payment-total">
+          <span>Total amount</span>
+          <h2>₹{total}</h2>
+        </div>
+
+        <h3 className="h5 mt-4">Choose payment method</h3>
+
+        <label className="payment-option">
+          <input
+            type="radio"
+            name="payment"
+            value="UPI"
+            checked={paymentMethod === "UPI"}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+          />
+          <span>UPI </span>
+        </label>
+
+        <label className="payment-option">
+          <input
+            type="radio"
+            name="payment"
+            value="Card"
+            checked={paymentMethod === "Card"}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+          />
+          <span>Credit / Debit Card </span>
+        </label>
+
+        <label className="payment-option">
+          <input
+            type="radio"
+            name="payment"
+            value="Cash"
+            checked={paymentMethod === "Cash"}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+          />
+          <span>Cash at Cafeteria </span>
+        </label>
+
+        <button
+          type="button"
+          className="btn btn-success w-100 mt-4"
+          onClick={placeOrder}
+          disabled={cart.length === 0}
+        >
+          Confirm Payment — ₹{total}
+        </button>
+
+        <p className="small text-secondary text-center mt-3 mb-0">
+          Demo only. No real money will be charged.
+        </p>
+      </div>
+    </section>
+  ) : (
+    <>
             <section className="hero p-4 p-md-5 rounded-4 mb-4">
               <span className="badge text-bg-light mb-3">
                 YOUR OFFICE CAFETERIA
@@ -229,7 +307,10 @@ function App() {
             </div>
 
             <div className="row g-3">
-              {initialFoods.map((food) => (
+              {initialFoods.map((food) => {
+                const cartItem = cart.find((item) => item.id === food.id);
+                return(
+
                 <div className="col-12 col-sm-6 col-lg-3" key={food.id}>
                   <div className="card food-card h-100 border-0 shadow-sm">
                     
@@ -243,21 +324,52 @@ function App() {
                       <span className="small text-success fw-semibold">
                         {food.category}
                       </span>
+
                       <h3 className="h5 mt-1">{food.name}</h3>
-                      <div className="mt-auto d-flex justify-content-between align-items-center">
+
+                      <div className="mt-auto d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <strong>₹{food.price}</strong>
-                        <button
-                          className="btn btn-success btn-sm"
-                          onClick={() => addToCart(food)}
+
+                      {cartItem ? (
+                        <div className="quantity-control">
+                          <button
+                            type="button"
+                            className="btn btn-outline-success quantity-btn"
+                            onClick={() => changeQuantity(food.id, -1)}
+                            aria-label={`Decrease ${food.name} quantity`}
+                          >
+                            −
+                          </button>
+
+                          <span className="quantity-number">
+                            {cartItem.quantity}
+                          </span>
+
+                          <button
+                            type="button"
+                            className="btn btn-success quantity-btn"
+                            onClick={() => changeQuantity(food.id, 1)}
+                            aria-label={`Increase ${food.name} quantity`}
                         >
-                          + Add
+                          +
                         </button>
                       </div>
-                    </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-success btn-sm"
+                        onClick={() => addToCart(food)}
+                      >
+                        + Add
+                      </button>
+                    )}
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
+          );
+        })}
+      </div>
 
             <section className="bg-white border rounded-4 p-3 p-md-4 mt-4">
               <h2 className="h4">Your cart</h2>
@@ -304,12 +416,15 @@ function App() {
                     <strong>₹{total}</strong>
                   </div>
 
-                  <button
-                    className="btn btn-success mt-3"
-                    onClick={placeOrder}
-                  >
-                    Place demo order
-                  </button>
+                
+<button
+  type="button"
+  className="btn btn-success w-100 mt-3"
+  onClick={() => setShowPaymentPage(true)}
+>
+  Proceed to Payment — ₹{total}
+</button>
+
                 </>
               )}
             </section>
@@ -336,6 +451,7 @@ function App() {
                 ))}
             </section>
           </>
+        )
         ) : (
           <>
             <div className="mb-4">
@@ -380,6 +496,19 @@ function App() {
                       <p className="text-secondary mb-2">
                         Employee: {order.employee}
                       </p>
+{order.paymentStatus && (
+  <div className="small mb-2">
+    <span className="payment-status">
+      PAYMENT {order.paymentStatus}
+    </span>
+
+    <div className="text-secondary mt-2">
+      Method: {order.paymentMethod}
+    </div>
+  </div>
+)}
+
+                      
                     </div>
                     <span className="badge text-bg-success align-self-start">
                       {order.status}
@@ -448,9 +577,4 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
 
