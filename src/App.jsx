@@ -1,5 +1,4 @@
-import { useState } from "react"; 
-
+import { useState, useEffect } from "react";
 const initialFoods = [
   { 
     id: 1, 
@@ -96,13 +95,51 @@ const initialOrders = [
 ];
 
 function App() {
-  const [view, setView] = useState("customer");
+  const [view, setView] = useState(
+    window.location.pathname==="/chef" ? "chef" : "customer"
+    );
   const [cart, setCart] = useState([]);
-  const [orders, setOrders] = useState(initialOrders);
-  const [message, setMessage] = useState("");
+  const [orders, setOrders] = useState(() => {
+    try {
+      const savedOrders = localStorage.getItem("officebite_orders");
+      return savedOrders ? JSON.parse(savedOrders) : initialOrders;
+    } catch {
+      return initialOrders;
+    }
+  });  const [message, setMessage] = useState("");
   const [showPaymentPage, setShowPaymentPage] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("UPI");
+// Save orders whenever they change
+useEffect(() => {
+  localStorage.setItem("officebite_orders", JSON.stringify(orders));
+}, [orders]);
 
+// Receive order changes from other browser tabs
+useEffect(() => {
+  function syncOrders(event) {
+    if (event.key !== "officebite_orders" || !event.newValue) {
+      return;
+    }
+
+    try {
+      const updatedOrders = JSON.parse(event.newValue);
+
+      setOrders((currentOrders) =>
+        JSON.stringify(currentOrders) === JSON.stringify(updatedOrders)
+          ? currentOrders
+          : updatedOrders
+      );
+    } catch (error) {
+      console.error("Could not sync orders:", error);
+    }
+  }
+
+  window.addEventListener("storage", syncOrders);
+
+  return () => {
+    window.removeEventListener("storage", syncOrders);
+  };
+}, []);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const total = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -139,7 +176,7 @@ function App() {
     );
   }
 
-  
+
 function placeOrder() {
   if (cart.length === 0) {
     setMessage("Please add food to your cart first.");
@@ -176,31 +213,118 @@ function placeOrder() {
 
   return (
     <div className="app-shell">
-      <header className="navbar navbar-expand bg-white border-bottom px-3 px-md-5">
-        <a className="navbar-brand fw-bold text-success" href="#home">
-          <img
-            src="/food-logo.png"
-            alt="OfficeBite Logo"
-            className="brand-logo"
-            />
-          OfficeBite..
-        </a>
+      
+<header className="navbar navbar-expand bg-white border-bottom px-3 px-md-5">
+  <a
+    className="navbar-brand fw-bold text-success"
+    href="#home"
+    onClick={(e) => {
+      e.preventDefault();
+      setView("customer");
+      setShowPaymentPage(false);
+      window.history.pushState({}, "", "/");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }}
+  >
+    <img
+      src="/food-logo.png"
+      alt="OfficeBite Logo"
+      className="brand-logo"
+    />
+    OfficeBite..
+  </a>
 
-        <div className="ms-auto d-flex gap-2">
-          <button
-            className={`btn ${view === "customer" ? "btn-success" : "btn-outline-success"}`}
-            onClick={() => setView("customer")}
-          >
-            Customer
-          </button>
-          <button
-            className={`btn ${view === "chef" ? "btn-success" : "btn-outline-success"}`}
-            onClick={() => setView("chef")}
-          >
-            Chef
-          </button>
-        </div>
-      </header>
+  
+<nav className="officebite-nav ms-auto">
+  {view === "customer" && (
+    <>
+      <button
+        type="button"
+        className="nav-link-custom"
+        onClick={() => {
+          setView("customer");
+          setShowPaymentPage(false);
+          window.history.pushState({}, "", "/");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      >
+        Home
+      </button>
+
+      <button
+        type="button"
+        className="nav-link-custom"
+        onClick={() => {
+          setShowPaymentPage(false);
+          window.history.pushState({}, "", "/");
+          setTimeout(() => {
+            document.getElementById("todays-menu")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }, 100);
+        }}
+      >
+        Today's Menu
+      </button>
+
+      <button
+        type="button"
+        className="nav-link-custom"
+        onClick={() => {
+          setShowPaymentPage(false);
+          window.history.pushState({}, "", "/");
+          setTimeout(() => {
+            document.getElementById("my-orders")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }, 100);
+        }}
+      >
+        My Orders
+      </button>
+
+      <button
+        type="button"
+        className="cart-nav-button"
+        aria-label={`Open cart, ${cartCount} items`}
+        onClick={() => {
+          setShowPaymentPage(false);
+          window.history.pushState({}, "", "/");
+          setTimeout(() => {
+            document.getElementById("my-cart")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }, 100);
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="9" cy="21" r="1" />
+          <circle cx="20" cy="21" r="1" />
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        </svg>
+        <span className="cart-count">{cartCount}</span>
+      </button>
+    </>
+  )}
+
+  
+</nav>
+
+</header>
+
 
       <main className="container py-4 py-md-5">
       {view === "customer" ? (
@@ -274,14 +398,17 @@ function placeOrder() {
         </p>
       </div>
     </section>
+  
   ) : (
     <>
-            <section className="hero p-4 p-md-5 rounded-4 mb-4">
-              <span className="badge text-bg-light mb-3">
+            <section 
+            id ="home"
+            className="hero p-4 p-md-5 rounded-4 mb-4">
+              {/* <span className="badge text-bg-light mb-3">
                 YOUR OFFICE CAFETERIA
-              </span>
+              </span> */}
               <h1 className="display-5 fw-bold">
-                Good food. Less waiting.
+                Good food. Less waiting...
               </h1>
               <p className="mb-0">
                 Order your favourite meal and track it from the kitchen.
@@ -294,7 +421,9 @@ function placeOrder() {
               </div>
             )}
 
-            <div className="d-flex justify-content-between align-items-center mb-3">
+            <div 
+            id="todays-menu"
+            className="d-flex justify-content-between align-items-center mb-3">
               <div>
                 <h2 className="h3 mb-1">Today's menu</h2>
                 <p className="text-secondary mb-0">
@@ -371,7 +500,9 @@ function placeOrder() {
         })}
       </div>
 
-            <section className="bg-white border rounded-4 p-3 p-md-4 mt-4">
+            <section 
+            id ="my-cart"
+            className="bg-white border rounded-4 p-3 p-md-4 mt-4">
               <h2 className="h4">Your cart</h2>
 
               {cart.length === 0 ? (
@@ -429,7 +560,9 @@ function placeOrder() {
               )}
             </section>
 
-            <section className="mt-4">
+            <section 
+            id="my-orders"
+            className="mt-4">
               <h2 className="h4">Your orders</h2>
               {orders
                 .filter((order) => order.employee === "Demo Employee")
@@ -451,7 +584,7 @@ function placeOrder() {
                 ))}
             </section>
           </>
-        )
+          )
         ) : (
           <>
             <div className="mb-4">
@@ -577,4 +710,8 @@ function placeOrder() {
 }
 
 export default App;
+
+
+
+
 
