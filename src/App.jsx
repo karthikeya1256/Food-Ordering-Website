@@ -1,4 +1,4 @@
-import { useState } from "react"; 
+import { useEffect, useState } from "react"; 
 
 const initialFoods = [
   { 
@@ -96,6 +96,60 @@ const initialOrders = [
 ];
 
 function App() {
+  const [foods, setFoods] = useState([]);
+  const [loadingMenu, setLoadingMenu] = useState(true);
+  const [menuError, setMenuError] = useState("");
+  const [pendingOrder, setPendingOrder] = useState(null);
+
+
+useEffect(() => {
+  async function loadMenu() {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:5000/api/menu"
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load menu");
+      }
+
+      const data = await response.json();
+
+      const imageByName = {
+        "Veg Fried Rice": "/fried-rice.png",
+        "Paneer Wrap": "/paneer-wrap.png",
+        "Masala Dosa": "/masala-dosa.png",
+        "Fresh Fruit Bowl": "/fruit-bowl.png",
+        "whey protein shake": "/whey-protein.png",
+        "Chicken Biryani": "/biryani.png",
+        "Samosa": "/samosa.png",
+        "Idly": "/idly.png",
+        "Poori": "/poori.png",
+        "Wada": "/wada.png",
+        "Tea": "/tea.png",
+        "Coffee": "/coffee.png",
+      };
+
+      setFoods(
+        data
+          .filter((item) => item.is_available)
+          .map((item) => ({
+            ...item,
+            image: imageByName[item.name] || "",
+          }))
+      );
+    } catch (error) {
+      console.error("Menu loading failed:", error);
+      setMenuError("Could not load menu. Check the backend.");
+    } finally {
+      setLoadingMenu(false);
+    }
+  }
+
+  loadMenu();
+  loadOrders();
+}, []);
+
   const [view, setView] = useState("customer");
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState(initialOrders);
@@ -108,6 +162,39 @@ function App() {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+
+async function loadOrders() {
+  try {
+    const response = await fetch("http://127.0.0.1:5000/api/orders");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load orders");
+    }
+
+    const formattedOrders = data.map((order) => ({
+      id: order.order_id,
+      employee: order.customer_name,
+      items: order.items.map(
+        (item) => `${item.name} × ${item.quantity}`
+      ),
+      total: Number(order.total_amount),
+      status: {
+        pending: "PLACED",
+        confirmed: "ACCEPTED",
+        preparing: "PREPARING",
+        ready: "READY",
+        completed: "COMPLETED",
+      }[order.status] || order.status.toUpperCase(),
+    }));
+
+    setOrders(formattedOrders);
+  } catch (error) {
+    console.error("Loading orders failed:", error);
+    setMessage("Could not load orders from the server.");
+  }
+}
+
 
   function addToCart(food) {
     setCart((current) => {
@@ -140,39 +227,161 @@ function App() {
   }
 
   
-function placeOrder() {
+
+async function placeOrder() {
   if (cart.length === 0) {
     setMessage("Please add food to your cart first.");
     setShowPaymentPage(false);
     return;
   }
 
-  const newOrder = {
-    id: Date.now(),
-    employee: "Demo Employee",
-    items: cart.map(
-      (item) => `${item.name} × ${item.quantity}`
-    ),
-    total,
-    status: "PLACED",
-    paymentMethod,
-    paymentStatus: "PAID",
-  };
+  try {
+    setMessage("Placing your order...");
 
-  setOrders((current) => [newOrder, ...current]);
-  setCart([]);
-  setShowPaymentPage(false);
-  setMessage(`Demo payment successful! Order #${newOrder.id} placed.`);
+    const response = await fetch("http://127.0.0.1:5000/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_id: 1,
+        items: cart.map((item) => ({
+          menu_item_id: item.id,
+          quantity: item.quantity,
+        })),
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || "Could not place order");
+    }
+
+    const newOrder = {
+      id: data.order_id,
+      employee: "Demo Employee",
+      items: cart.map(
+        (item) => `${item.name} × ${item.quantity}`
+      ),
+      total: Number(data.total_amount),
+      status: "PLACED",
+      paymentMethod,
+      paymentStatus: "PENDING",
+    };
+
+    setOrders((current) => [newOrder, ...current]);
+    setPendingOrder(newOrder);
+    setShowPaymentPage(true);
+    setMessage(`Order #${newOrder.id} created. Complete the demo payment next.`);
+  } catch (error) {
+    console.error("Order creation failed:", error);
+    setMessage(error.message || "Could not place order. Please try again.");
+  }
 }
 
 
-  function updateStatus(id, status) {
+async function processPayment() {
+  
+  console.log("Pending order:", pendingOrder);
+  console.log("Cart:", cart);
+
+  if (!pendingOrder) {
+    setMessage("No pending order found. Please place your order again.");
+    alert("No pending order found!");
+    return;
+  }
+
+  try {
+    setMessage("Processing demo payment...");
+
+    const response = await fetch(
+      `http://127.0.0.1:5000/api/orders/${pendingOrder.id}/payment`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ outcome: "success" }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Payment failed");
+    }
+
+    setOrders((current) =>
+      current.map((order) =>
+        order.id === pendingOrder.id
+          ? {
+              ...order,
+              status: "ACCEPTED",
+              paymentMethod,
+              paymentStatus: "PAID",
+            }
+          : order
+      )
+    );
+
+    setCart([]);
+    setPendingOrder(null);
+    setShowPaymentPage(false);
+    setMessage(`Demo payment successful! Order #${data.order_id} confirmed.`);
+  } catch (error) {
+    console.error("Payment failed:", error);
+    setMessage(error.message || "Payment failed. Please try again.");
+  }
+}
+
+
+  
+async function updateStatus(id, status) {
+  const backendStatus = {
+    PREPARING: "preparing",
+    READY: "ready",
+    COMPLETED: "completed",
+  }[status];
+
+  if (!backendStatus) {
     setOrders((current) =>
       current.map((order) =>
         order.id === id ? { ...order, status } : order
       )
     );
+    return;
   }
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:5000/api/orders/${id}/status`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: backendStatus }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || "Could not update order status");
+    }
+
+    setOrders((current) =>
+      current.map((order) =>
+        order.id === id ? { ...order, status } : order
+      )
+    );
+
+    setMessage(`Order #${id} updated to ${status}`);
+  } catch (error) {
+    console.error("Status update failed:", error);
+    setMessage(error.message || "Could not update order status");
+  }
+}
+
 
   return (
     <div className="app-shell">
@@ -189,13 +398,18 @@ function placeOrder() {
         <div className="ms-auto d-flex gap-2">
           <button
             className={`btn ${view === "customer" ? "btn-success" : "btn-outline-success"}`}
-            onClick={() => setView("customer")}
+            onClick={async () => {
+            await loadOrders();
+            setView("customer");
+            }}
           >
             Customer
           </button>
           <button
             className={`btn ${view === "chef" ? "btn-success" : "btn-outline-success"}`}
-            onClick={() => setView("chef")}
+            onClick={async () => {await loadOrders();
+            setView("chef");
+            }}
           >
             Chef
           </button>
@@ -263,7 +477,7 @@ function placeOrder() {
         <button
           type="button"
           className="btn btn-success w-100 mt-4"
-          onClick={placeOrder}
+          onClick={processPayment}
           disabled={cart.length === 0}
         >
           Confirm Payment — ₹{total}
@@ -307,7 +521,7 @@ function placeOrder() {
             </div>
 
             <div className="row g-3">
-              {initialFoods.map((food) => {
+              {foods.map((food) => {
                 const cartItem = cart.find((item) => item.id === food.id);
                 return(
 
@@ -417,13 +631,16 @@ function placeOrder() {
                   </div>
 
                 
+
 <button
   type="button"
   className="btn btn-success w-100 mt-3"
-  onClick={() => setShowPaymentPage(true)}
+  onClick={placeOrder}
+  disabled={cart.length === 0}
 >
   Proceed to Payment — ₹{total}
 </button>
+
 
                 </>
               )}
