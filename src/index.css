@@ -43,14 +43,32 @@ input {
   flex-shrink: 0;
 }
 
+
 .hero {
-  background: linear-gradient(120deg, #e3f4e8, #f3f8e8);
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(227, 244, 232, 0.95) 0%,
+      rgba(227, 244, 232, 0.82) 45%,
+      rgba(227, 244, 232, 0.15) 100%
+    ),
+    url("/hero-food.jpg");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
   color: #183c27;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .hero p {
-  color: #526c5a;
+  color: #354b3b;
 }
+
 
 .food-card {
   border-radius: 18px;

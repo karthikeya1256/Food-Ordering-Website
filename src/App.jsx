@@ -101,8 +101,10 @@ function App() {
   const [menuError, setMenuError] = useState("");
   const [pendingOrder, setPendingOrder] = useState(null);
 
-
-useEffect(() => {
+  const [view, setView] = useState(
+    window.location.pathname === "/chef" ? "chef" : "customer"
+  );
+  useEffect(() => {
   async function loadMenu() {
     try {
       const response = await fetch(
@@ -149,8 +151,27 @@ useEffect(() => {
   loadMenu();
   loadOrders();
 }, []);
+  useEffect(() => {
+  function handlePopState() {
+    setView(
+      window.location.pathname === "/chef" ? "chef" : "customer"
+    );
+  }
 
-  const [view, setView] = useState("customer");
+  window.addEventListener("popstate", handlePopState);
+
+  return () => {
+    window.removeEventListener("popstate", handlePopState);
+  };
+}, []);
+
+function navigateToPage(page) {
+  const path = page === "chef" ? "/chef" : "/customer";
+
+  window.history.pushState({}, "", path);
+  setView(page);
+}
+
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState(initialOrders);
   const [message, setMessage] = useState("");
@@ -399,17 +420,18 @@ async function updateStatus(id, status) {
           <button
             className={`btn ${view === "customer" ? "btn-success" : "btn-outline-success"}`}
             onClick={async () => {
-            await loadOrders();
-            setView("customer");
-            }}
+  await loadOrders();
+  navigateToPage("customer");
+}}
           >
             Customer
           </button>
           <button
             className={`btn ${view === "chef" ? "btn-success" : "btn-outline-success"}`}
-            onClick={async () => {await loadOrders();
-            setView("chef");
-            }}
+            onClick={async () => {
+  await loadOrders();
+  navigateToPage("chef");
+}}
           >
             Chef
           </button>
