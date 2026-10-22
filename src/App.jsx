@@ -1,11 +1,81 @@
-
-import { useState } from "react";
+import { useEffect, useState } from "react"; 
 
 const initialFoods = [
-  { id: 1, name: "Veg Fried Rice", category: "Lunch", price: 100, emoji: "🍚" },
-  { id: 2, name: "Paneer Wrap", category: "Snacks", price: 80, emoji: "🌯" },
-  { id: 3, name: "Masala Dosa", category: "Breakfast", price: 60, emoji: "🥞" },
-  { id: 4, name: "Fresh Fruit Bowl", category: "Healthy", price: 70, emoji: "🍓" },
+  { 
+    id: 1, 
+    name: "Veg Fried Rice", 
+    category: "Lunch", 
+    price: 100, 
+    image:"/fried-rice.png",
+  },
+  { 
+    id: 2, 
+    name: "Paneer Wrap", 
+    category: "Snacks", 
+    price: 80, 
+    image:"/paneer-wrap.png", 
+  },
+  { 
+    id: 3,
+    name: "Masala Dosa",
+    category: "Breakfast",
+    price: 60, image:"/masala-dosa.png",
+  },
+  { 
+    id: 4, 
+    name: "Fresh Fruit Bowl",
+    category: "Healthy", 
+    price: 70,
+    image:"/fruit-bowl.png", 
+  },
+  {id: 5, 
+    name: "whey protein shake",
+    category: "Healthy", 
+    price: 170,
+    image:"/whey-protein.png", 
+  },
+  {id: 6, 
+    name: "Chicken Biryani",
+    category: "Lunch", 
+    price: 120,
+    image:"/biryani.png", 
+  },
+  {id: 7, 
+    name: "Samosa",
+    category: "Snacks", 
+    price: 30,
+    image:"/samosa.png", 
+  },
+  {id: 8, 
+    name: "Idly",
+    category: "Breakfast", 
+    price: 45,
+    image:"/idly.png", 
+  },
+  {id: 9, 
+    name: "Poori",
+    category: "Breakfast", 
+    price: 50,
+    image:"/poori.png", 
+  },
+  {id: 10, 
+    name: "Wada",
+    category: "Breakfast", 
+    price: 50,
+    image:"/wada.png", 
+  },
+  {id: 11, 
+    name: "Tea",
+    category: "", 
+    price: 25,
+    image:"/tea.png", 
+  },
+  {id: 12, 
+    name: "Coffee",
+    category: "", 
+    price: 35,
+    image:"/coffee.png", 
+  },
 ];
 
 const initialOrders = [
@@ -26,16 +96,126 @@ const initialOrders = [
 ];
 
 function App() {
-  const [view, setView] = useState("customer");
+  const [foods, setFoods] = useState([]);
+  const [loadingMenu, setLoadingMenu] = useState(true);
+  const [menuError, setMenuError] = useState("");
+  const [pendingOrder, setPendingOrder] = useState(null);
+
+  const [view, setView] = useState(
+    window.location.pathname === "/chef" ? "chef" : "customer"
+  );
+  useEffect(() => {
+  async function loadMenu() {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:5000/api/menu"
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load menu");
+      }
+
+      const data = await response.json();
+
+      const imageByName = {
+        "Veg Fried Rice": "/fried-rice.png",
+        "Paneer Wrap": "/paneer-wrap.png",
+        "Masala Dosa": "/masala-dosa.png",
+        "Fresh Fruit Bowl": "/fruit-bowl.png",
+        "whey protein shake": "/whey-protein.png",
+        "Chicken Biryani": "/biryani.png",
+        "Samosa": "/samosa.png",
+        "Idly": "/idly.png",
+        "Poori": "/poori.png",
+        "Wada": "/wada.png",
+        "Tea": "/tea.png",
+        "Coffee": "/coffee.png",
+      };
+
+      setFoods(
+        data
+          .filter((item) => item.is_available)
+          .map((item) => ({
+            ...item,
+            image: imageByName[item.name] || "",
+          }))
+      );
+    } catch (error) {
+      console.error("Menu loading failed:", error);
+      setMenuError("Could not load menu. Check the backend.");
+    } finally {
+      setLoadingMenu(false);
+    }
+  }
+
+  loadMenu();
+  loadOrders();
+}, []);
+  useEffect(() => {
+  function handlePopState() {
+    setView(
+      window.location.pathname === "/chef" ? "chef" : "customer"
+    );
+  }
+
+  window.addEventListener("popstate", handlePopState);
+
+  return () => {
+    window.removeEventListener("popstate", handlePopState);
+  };
+}, []);
+
+function navigateToPage(page) {
+  const path = page === "chef" ? "/chef" : "/customer";
+
+  window.history.pushState({}, "", path);
+  setView(page);
+}
+
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState(initialOrders);
   const [message, setMessage] = useState("");
+  const [showPaymentPage, setShowPaymentPage] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("UPI");
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const total = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+
+async function loadOrders() {
+  try {
+    const response = await fetch("http://127.0.0.1:5000/api/orders");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load orders");
+    }
+
+    const formattedOrders = data.map((order) => ({
+      id: order.order_id,
+      employee: order.customer_name,
+      items: order.items.map(
+        (item) => `${item.name} × ${item.quantity}`
+      ),
+      total: Number(order.total_amount),
+      status: {
+        pending: "PLACED",
+        confirmed: "ACCEPTED",
+        preparing: "PREPARING",
+        ready: "READY",
+        completed: "COMPLETED",
+      }[order.status] || order.status.toUpperCase(),
+    }));
+
+    setOrders(formattedOrders);
+  } catch (error) {
+    console.error("Loading orders failed:", error);
+    setMessage("Could not load orders from the server.");
+  }
+}
+
 
   function addToCart(food) {
     setCart((current) => {
@@ -67,52 +247,191 @@ function App() {
     );
   }
 
-  function placeOrder() {
-    if (cart.length === 0) {
-      setMessage("Please add food to your cart first.");
-      return;
+  
+
+async function placeOrder() {
+  if (cart.length === 0) {
+    setMessage("Please add food to your cart first.");
+    setShowPaymentPage(false);
+    return;
+  }
+
+  try {
+    setMessage("Placing your order...");
+
+    const response = await fetch("http://127.0.0.1:5000/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_id: 1,
+        items: cart.map((item) => ({
+          menu_item_id: item.id,
+          quantity: item.quantity,
+        })),
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || "Could not place order");
     }
 
     const newOrder = {
-      id: Date.now(),
+      id: data.order_id,
       employee: "Demo Employee",
       items: cart.map(
         (item) => `${item.name} × ${item.quantity}`
       ),
-      total,
+      total: Number(data.total_amount),
       status: "PLACED",
+      paymentMethod,
+      paymentStatus: "PENDING",
     };
 
     setOrders((current) => [newOrder, ...current]);
-    setCart([]);
-    setMessage(`Demo order #${newOrder.id} placed successfully!`);
+    setPendingOrder(newOrder);
+    setShowPaymentPage(true);
+    setMessage(`Order #${newOrder.id} created. Complete the demo payment next.`);
+  } catch (error) {
+    console.error("Order creation failed:", error);
+    setMessage(error.message || "Could not place order. Please try again.");
+  }
+}
+
+
+async function processPayment() {
+  
+  console.log("Pending order:", pendingOrder);
+  console.log("Cart:", cart);
+
+  if (!pendingOrder) {
+    setMessage("No pending order found. Please place your order again.");
+    alert("No pending order found!");
+    return;
   }
 
-  function updateStatus(id, status) {
+  try {
+    setMessage("Processing demo payment...");
+
+    const response = await fetch(
+      `http://127.0.0.1:5000/api/orders/${pendingOrder.id}/payment`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ outcome: "success" }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Payment failed");
+    }
+
+    setOrders((current) =>
+      current.map((order) =>
+        order.id === pendingOrder.id
+          ? {
+              ...order,
+              status: "ACCEPTED",
+              paymentMethod,
+              paymentStatus: "PAID",
+            }
+          : order
+      )
+    );
+
+    setCart([]);
+    setPendingOrder(null);
+    setShowPaymentPage(false);
+    setMessage(`Demo payment successful! Order #${data.order_id} confirmed.`);
+  } catch (error) {
+    console.error("Payment failed:", error);
+    setMessage(error.message || "Payment failed. Please try again.");
+  }
+}
+
+
+  
+async function updateStatus(id, status) {
+  const backendStatus = {
+    PREPARING: "preparing",
+    READY: "ready",
+    COMPLETED: "completed",
+  }[status];
+
+  if (!backendStatus) {
     setOrders((current) =>
       current.map((order) =>
         order.id === id ? { ...order, status } : order
       )
     );
+    return;
   }
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:5000/api/orders/${id}/status`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: backendStatus }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || "Could not update order status");
+    }
+
+    setOrders((current) =>
+      current.map((order) =>
+        order.id === id ? { ...order, status } : order
+      )
+    );
+
+    setMessage(`Order #${id} updated to ${status}`);
+  } catch (error) {
+    console.error("Status update failed:", error);
+    setMessage(error.message || "Could not update order status");
+  }
+}
+
 
   return (
     <div className="app-shell">
       <header className="navbar navbar-expand bg-white border-bottom px-3 px-md-5">
         <a className="navbar-brand fw-bold text-success" href="#home">
+          <img
+            src="/food-logo.png"
+            alt="OfficeBite Logo"
+            className="brand-logo"
+            />
           OfficeBite..
         </a>
 
         <div className="ms-auto d-flex gap-2">
           <button
             className={`btn ${view === "customer" ? "btn-success" : "btn-outline-success"}`}
-            onClick={() => setView("customer")}
+            onClick={async () => {
+  await loadOrders();
+  navigateToPage("customer");
+}}
           >
             Customer
           </button>
           <button
             className={`btn ${view === "chef" ? "btn-success" : "btn-outline-success"}`}
-            onClick={() => setView("chef")}
+            onClick={async () => {
+  await loadOrders();
+  navigateToPage("chef");
+}}
           >
             Chef
           </button>
@@ -120,8 +439,79 @@ function App() {
       </header>
 
       <main className="container py-4 py-md-5">
-        {view === "customer" ? (
-          <>
+      {view === "customer" ? (
+  showPaymentPage ? (
+    <section className="payment-page">
+      <button
+        type="button"
+        className="btn btn-outline-success mb-4"
+        onClick={() => setShowPaymentPage(false)}
+      >
+        ← Back to Menu
+      </button>
+
+      <div className="payment-card">
+        <h1>OfficeBite Payment</h1>
+        <p className="text-secondary">
+          Review your order and select a demo payment method.
+        </p>
+
+        <div className="payment-total">
+          <span>Total amount</span>
+          <h2>₹{total}</h2>
+        </div>
+
+        <h3 className="h5 mt-4">Choose payment method</h3>
+
+        <label className="payment-option">
+          <input
+            type="radio"
+            name="payment"
+            value="UPI"
+            checked={paymentMethod === "UPI"}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+          />
+          <span>UPI </span>
+        </label>
+
+        <label className="payment-option">
+          <input
+            type="radio"
+            name="payment"
+            value="Card"
+            checked={paymentMethod === "Card"}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+          />
+          <span>Credit / Debit Card </span>
+        </label>
+
+        <label className="payment-option">
+          <input
+            type="radio"
+            name="payment"
+            value="Cash"
+            checked={paymentMethod === "Cash"}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+          />
+          <span>Cash at Cafeteria </span>
+        </label>
+
+        <button
+          type="button"
+          className="btn btn-success w-100 mt-4"
+          onClick={processPayment}
+          disabled={cart.length === 0}
+        >
+          Confirm Payment — ₹{total}
+        </button>
+
+        <p className="small text-secondary text-center mt-3 mb-0">
+          Demo only. No real money will be charged.
+        </p>
+      </div>
+    </section>
+  ) : (
+    <>
             <section className="hero p-4 p-md-5 rounded-4 mb-4">
               <span className="badge text-bg-light mb-3">
                 YOUR OFFICE CAFETERIA
@@ -153,29 +543,69 @@ function App() {
             </div>
 
             <div className="row g-3">
-              {initialFoods.map((food) => (
+              {foods.map((food) => {
+                const cartItem = cart.find((item) => item.id === food.id);
+                return(
+
                 <div className="col-12 col-sm-6 col-lg-3" key={food.id}>
                   <div className="card food-card h-100 border-0 shadow-sm">
-                    <div className="food-emoji">{food.emoji}</div>
+                    
+                    <img 
+                    src={food.image}
+                    alt={food.name}
+                    className="food-image"
+                    />
+
                     <div className="card-body d-flex flex-column">
                       <span className="small text-success fw-semibold">
                         {food.category}
                       </span>
+
                       <h3 className="h5 mt-1">{food.name}</h3>
-                      <div className="mt-auto d-flex justify-content-between align-items-center">
+
+                      <div className="mt-auto d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <strong>₹{food.price}</strong>
-                        <button
-                          className="btn btn-success btn-sm"
-                          onClick={() => addToCart(food)}
+
+                      {cartItem ? (
+                        <div className="quantity-control">
+                          <button
+                            type="button"
+                            className="btn btn-outline-success quantity-btn"
+                            onClick={() => changeQuantity(food.id, -1)}
+                            aria-label={`Decrease ${food.name} quantity`}
+                          >
+                            −
+                          </button>
+
+                          <span className="quantity-number">
+                            {cartItem.quantity}
+                          </span>
+
+                          <button
+                            type="button"
+                            className="btn btn-success quantity-btn"
+                            onClick={() => changeQuantity(food.id, 1)}
+                            aria-label={`Increase ${food.name} quantity`}
                         >
-                          + Add
+                          +
                         </button>
                       </div>
-                    </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-success btn-sm"
+                        onClick={() => addToCart(food)}
+                      >
+                        + Add
+                      </button>
+                    )}
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
+          );
+        })}
+      </div>
 
             <section className="bg-white border rounded-4 p-3 p-md-4 mt-4">
               <h2 className="h4">Your cart</h2>
@@ -222,12 +652,18 @@ function App() {
                     <strong>₹{total}</strong>
                   </div>
 
-                  <button
-                    className="btn btn-success mt-3"
-                    onClick={placeOrder}
-                  >
-                    Place demo order
-                  </button>
+                
+
+<button
+  type="button"
+  className="btn btn-success w-100 mt-3"
+  onClick={placeOrder}
+  disabled={cart.length === 0}
+>
+  Proceed to Payment — ₹{total}
+</button>
+
+
                 </>
               )}
             </section>
@@ -254,6 +690,7 @@ function App() {
                 ))}
             </section>
           </>
+        )
         ) : (
           <>
             <div className="mb-4">
@@ -298,6 +735,19 @@ function App() {
                       <p className="text-secondary mb-2">
                         Employee: {order.employee}
                       </p>
+{order.paymentStatus && (
+  <div className="small mb-2">
+    <span className="payment-status">
+      PAYMENT {order.paymentStatus}
+    </span>
+
+    <div className="text-secondary mt-2">
+      Method: {order.paymentMethod}
+    </div>
+  </div>
+)}
+
+                      
                     </div>
                     <span className="badge text-bg-success align-self-start">
                       {order.status}
@@ -359,16 +809,11 @@ function App() {
       </main>
 
       <footer className="text-center text-secondary py-4">
-        OfficeBite · Office Food Ordering System
+        OfficeBite..
       </footer>
     </div>
   );
 }
 
 export default App;
-
-
-
-
-
 
