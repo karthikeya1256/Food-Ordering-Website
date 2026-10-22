@@ -710,8 +710,3 @@ function placeOrder() {
 }
 
 export default App;
-
-
-
-
-
