@@ -101,10 +101,8 @@ function App() {
   const [menuError, setMenuError] = useState("");
   const [pendingOrder, setPendingOrder] = useState(null);
 
-  const [view, setView] = useState(
-    window.location.pathname === "/chef" ? "chef" : "customer"
-  );
-  useEffect(() => {
+
+useEffect(() => {
   async function loadMenu() {
     try {
       const response = await fetch(
@@ -151,27 +149,10 @@ function App() {
   loadMenu();
   loadOrders();
 }, []);
-  useEffect(() => {
-  function handlePopState() {
-    setView(
-      window.location.pathname === "/chef" ? "chef" : "customer"
-    );
-  }
 
-  window.addEventListener("popstate", handlePopState);
-
-  return () => {
-    window.removeEventListener("popstate", handlePopState);
-  };
-}, []);
-
-function navigateToPage(page) {
-  const path = page === "chef" ? "/chef" : "/customer";
-
-  window.history.pushState({}, "", path);
-  setView(page);
-}
-
+  const [view, setView] = useState(() =>
+  window.location.pathname === "/chef" ? "chef" : "customer"
+  );
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState(initialOrders);
   const [message, setMessage] = useState("");
@@ -404,39 +385,51 @@ async function updateStatus(id, status) {
 }
 
 
+  useEffect(() => {
+    function handlePopState() {
+      setView(
+        window.location.pathname === "/chef" ? "chef" : "customer"
+      );
+    }
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  function navigateToPage(page) {
+    const path = page === "chef" ? "/chef" : "/customer";
+    window.history.pushState({}, "", path);
+    setView(page);
+  }
+
+
+
   return (
     <div className="app-shell">
+      
       <header className="navbar navbar-expand bg-white border-bottom px-3 px-md-5">
-        <a className="navbar-brand fw-bold text-success" href="#home">
+        <a
+          className="navbar-brand fw-bold text-success"
+          href={view === "chef" ? "/chef" : "/customer"}
+        >
           <img
             src="/food-logo.png"
             alt="OfficeBite Logo"
             className="brand-logo"
-            />
-          OfficeBite..
+          />
+          OfficeBite
         </a>
 
-        <div className="ms-auto d-flex gap-2">
-          <button
-            className={`btn ${view === "customer" ? "btn-success" : "btn-outline-success"}`}
-            onClick={async () => {
-  await loadOrders();
-  navigateToPage("customer");
-}}
-          >
-            Customer
-          </button>
-          <button
-            className={`btn ${view === "chef" ? "btn-success" : "btn-outline-success"}`}
-            onClick={async () => {
-  await loadOrders();
-  navigateToPage("chef");
-}}
-          >
-            Chef
-          </button>
+        <div className="ms-auto">
+          <span className="text-secondary small">
+            {view === "chef" ? "Kitchen Management" : "Food Ordering"}
+          </span>
         </div>
       </header>
+
 
       <main className="container py-4 py-md-5">
       {view === "customer" ? (
