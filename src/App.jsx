@@ -109,6 +109,14 @@ function App() {
   });  const [message, setMessage] = useState("");
   const [showPaymentPage, setShowPaymentPage] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("UPI");
+  const [successPopup, setSuccessPopup] = useState(null);
+
+// Hide popup automatically after 5 seconds
+useEffect(() => {
+  if (!successPopup) return;
+  const timer = setTimeout(() => setSuccessPopup(null), 5000);
+  return () => clearTimeout(timer);
+}, [successPopup]);
 // Save orders whenever they change
 useEffect(() => {
   localStorage.setItem("officebite_orders", JSON.stringify(orders));
@@ -199,9 +207,13 @@ function placeOrder() {
   setOrders((current) => [newOrder, ...current]);
   setCart([]);
   setShowPaymentPage(false);
-  setMessage(`Demo payment successful! Order #${newOrder.id} placed.`);
+  setMessage("");
+  setSuccessPopup({
+    orderId: newOrder.id,
+    amount: newOrder.total,
+    method: paymentMethod,
+  });
 }
-
 
   function updateStatus(id, status) {
     setOrders((current) =>
@@ -326,7 +338,7 @@ function placeOrder() {
 </header>
 
 
-      <main className="container py-4 py-md-5">
+<main className={view === "chef" ? "container-fluid px-3 px-md-4 py-3" : "container py-4 py-md-5"}>
       {view === "customer" ? (
   showPaymentPage ? (
     <section className="payment-page">
@@ -404,9 +416,6 @@ function placeOrder() {
             <section 
             id ="home"
             className="hero p-4 p-md-5 rounded-4 mb-4">
-              {/* <span className="badge text-bg-light mb-3">
-                YOUR OFFICE CAFETERIA
-              </span> */}
               <h1 className="display-5 fw-bold">
                 Good food. Less waiting...
               </h1>
@@ -587,15 +596,10 @@ function placeOrder() {
           )
         ) : (
           <>
-            <div className="mb-4">
-              <span className="badge text-bg-success mb-2">
-                KITCHEN MANAGEMENT
-              </span>
-              <h1 className="h2 fw-bold">Chef dashboard</h1>
-              <p className="text-secondary">
-                Manage incoming orders and update preparation status.
-              </p>
-            </div>
+            <div className="d-flex align-items-center gap-3 flex-wrap mb-3">
+  <h1 className="h4 fw-bold mb-0">Chef dashboard</h1>
+  <span className="badge text-bg-success">KITCHEN MANAGEMENT</span>
+</div>
 
             <div className="row g-3 mb-4">
               {[
@@ -605,99 +609,99 @@ function placeOrder() {
               ].map(([label, count]) => (
                 <div className="col-4" key={label}>
                   <div className="card border-0 shadow-sm">
-                    <div className="card-body">
-                      <div className="text-secondary small">{label}</div>
-                      <div className="display-6 fw-bold">{count}</div>
-                    </div>
+                  <div className="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+  <div className="text-secondary small">{label}</div>
+  <div className="h4 fw-bold mb-0">{count}</div>
+</div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <h2 className="h4 mb-3">Kitchen orders</h2>
+            <h2 className="h5 mb-2">Kitchen orders</h2>
 
-            {orders.length === 0 && (
-              <p className="text-secondary">No orders yet.</p>
-            )}
-
-            {orders.map((order) => (
-              <div className="card border-0 shadow-sm mb-3" key={order.id}>
-                <div className="card-body p-3 p-md-4">
-                  <div className="d-flex justify-content-between flex-wrap gap-2">
-                    <div>
-                      <h3 className="h5">Order #{order.id}</h3>
-                      <p className="text-secondary mb-2">
-                        Employee: {order.employee}
-                      </p>
-{order.paymentStatus && (
-  <div className="small mb-2">
-    <span className="payment-status">
-      PAYMENT {order.paymentStatus}
-    </span>
-
-    <div className="text-secondary mt-2">
-      Method: {order.paymentMethod}
-    </div>
-  </div>
+{orders.length === 0 && (
+  <p className="text-secondary">No orders yet.</p>
 )}
 
-                      
-                    </div>
-                    <span className="badge text-bg-success align-self-start">
-                      {order.status}
-                    </span>
-                  </div>
+<div className="row g-2">
+  {orders.map((order) => (
+    <div className="col-12 col-md-6 col-xl-4 col-xxl-3" key={order.id}>
+      <div className="card border-0 shadow-sm h-100">
+        <div className="card-body p-2 p-md-3 d-flex flex-column">
 
-                  <ul className="mb-3">
-                    {order.items.map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))}
-                  </ul>
+          <div className="d-flex justify-content-between align-items-start gap-2">
+            <div>
+              <div className="fw-bold">#{order.id}</div>
+              <div className="small text-secondary">{order.employee}</div>
+            </div>
+            <span className="badge text-bg-success">{order.status}</span>
+          </div>
 
-                  <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <strong>₹{order.total}</strong>
+          {order.paymentStatus && (
+            <div className="small mt-1">
+              <span className="payment-status">
+                PAYMENT {order.paymentStatus}
+              </span>
+              <span className="text-secondary ms-2">
+                {order.paymentMethod}
+              </span>
+            </div>
+          )}
 
-                    <div className="d-flex gap-2 flex-wrap">
-                      {order.status === "PLACED" && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => updateStatus(order.id, "ACCEPTED")}
-                        >
-                          Accept
-                        </button>
-                      )}
-
-                      {order.status === "ACCEPTED" && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => updateStatus(order.id, "PREPARING")}
-                        >
-                          Start preparing
-                        </button>
-                      )}
-
-                      {order.status === "PREPARING" && (
-                        <button
-                          className="btn btn-success btn-sm"
-                          onClick={() => updateStatus(order.id, "READY")}
-                        >
-                          Mark ready
-                        </button>
-                      )}
-
-                      {order.status === "READY" && (
-                        <button
-                          className="btn btn-dark btn-sm"
-                          onClick={() => updateStatus(order.id, "COMPLETED")}
-                        >
-                          Complete order
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <ul className="chef-items">
+            {order.items.map((item, index) => (
+              <li key={index}>{item}</li>
             ))}
+          </ul>
+
+          <div className="mt-auto d-flex justify-content-between align-items-center gap-2">
+            <strong>₹{order.total}</strong>
+
+            <div className="d-flex gap-2 flex-wrap">
+              {order.status === "PLACED" && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => updateStatus(order.id, "ACCEPTED")}
+                >
+                  Accept
+                </button>
+              )}
+
+              {order.status === "ACCEPTED" && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => updateStatus(order.id, "PREPARING")}
+                >
+                  Start preparing
+                </button>
+              )}
+
+              {order.status === "PREPARING" && (
+                <button
+                  className="btn btn-success btn-sm"
+                  onClick={() => updateStatus(order.id, "READY")}
+                >
+                  Mark ready
+                </button>
+              )}
+
+              {order.status === "READY" && (
+                <button
+                  className="btn btn-dark btn-sm"
+                  onClick={() => updateStatus(order.id, "COMPLETED")}
+                >
+                  Complete order
+                </button>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
           </>
         )}
       </main>
@@ -705,8 +709,24 @@ function placeOrder() {
       <footer className="text-center text-secondary py-4">
         OfficeBite..
       </footer>
+      {successPopup && (
+  <div className="success-overlay" onClick={() => setSuccessPopup(null)}>
+    <div className="success-popup" onClick={(e) => e.stopPropagation()}>
+      <div className="success-tick">✓</div>
+      <h2>Payment Successful!</h2>
+      <p className="mb-1">Order #{successPopup.orderId}</p>
+      <h3>₹{successPopup.amount}</h3>
+      <p className="text-secondary mb-0">
+        Paid via {successPopup.method}
+      </p>
+      <div className="success-progress" />
+    </div>
+  </div>
+)}
     </div>
   );
 }
 
 export default App;
+
+
