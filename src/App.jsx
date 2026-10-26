@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Admin from "./Admin";
 const initialFoods = [
   { 
     id: 1, 
@@ -77,22 +78,22 @@ const initialFoods = [
   },
 ];
 
-const initialOrders = [
-  {
-    id: 1001,
-    employee: "Rahul",
-    items: ["Veg Fried Rice × 1", "Fresh Fruit Bowl × 1"],
-    total: 170,
-    status: "PLACED",
-  },
-  {
-    id: 1002,
-    employee: "Priya",
-    items: ["Paneer Wrap × 2"],
-    total: 160,
-    status: "PREPARING",
-  },
-];
+// const initialOrders = [
+//   {
+//     id: 1001,
+//     employee: "Rahul",
+//     items: ["Veg Fried Rice × 1", "Fresh Fruit Bowl × 1"],
+//     total: 170,
+//     status: "PLACED",
+//   },
+//   {
+//     id: 1002,
+//     employee: "Priya",
+//     items: ["Paneer Wrap × 2"],
+//     total: 160,
+//     status: "PREPARING",
+//   },
+// ];
 
 function App() {
   const [view, setView] = useState(
@@ -141,6 +142,7 @@ useEffect(() => {
       console.error("Could not sync orders:", error);
     }
   }
+  
 
   window.addEventListener("storage", syncOrders);
 
@@ -222,7 +224,9 @@ function placeOrder() {
       )
     );
   }
-
+  if (window.location.pathname === "/admin") {
+    return <Admin />;
+  }
   return (
     <div className="app-shell">
       
@@ -726,6 +730,7 @@ function placeOrder() {
     </div>
   );
 }
+
 
 export default App;
 
