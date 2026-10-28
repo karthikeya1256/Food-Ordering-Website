@@ -77,6 +77,19 @@ const initialFoods = [
     image:"/coffee.png", 
   },
 ];
+const FOOD_KEY = "officebite_foods";
+
+function getSavedFoods() {
+  try {
+    const savedFoods = localStorage.getItem(FOOD_KEY);
+
+    return savedFoods !== null
+      ? JSON.parse(savedFoods)
+      : initialFoods;
+  } catch {
+    return initialFoods;
+  }
+}
 
 // const initialOrders = [
 //   {
@@ -100,14 +113,17 @@ function App() {
     window.location.pathname==="/chef" ? "chef" : "customer"
     );
   const [cart, setCart] = useState([]);
+  const [foods, setFoods] = useState(getSavedFoods);
+  
   const [orders, setOrders] = useState(() => {
     try {
       const savedOrders = localStorage.getItem("officebite_orders");
-      return savedOrders ? JSON.parse(savedOrders) : initialOrders;
+      return savedOrders ? JSON.parse(savedOrders) : [];
     } catch {
-      return initialOrders;
+      return [];
     }
-  });  const [message, setMessage] = useState("");
+  }); 
+  const [message, setMessage] = useState("");
   const [showPaymentPage, setShowPaymentPage] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("UPI");
   const [successPopup, setSuccessPopup] = useState(null);
@@ -148,6 +164,32 @@ useEffect(() => {
 
   return () => {
     window.removeEventListener("storage", syncOrders);
+  };
+}, []);
+// Sync menu changes made in the Admin interface
+useEffect(() => {
+  function syncFoods(event) {
+    if (event.key !== FOOD_KEY) {
+      return;
+    }
+
+    try {
+      const updatedFoods = event.newValue
+        ? JSON.parse(event.newValue)
+        : initialFoods;
+
+      if (Array.isArray(updatedFoods)) {
+        setFoods(updatedFoods);
+      }
+    } catch (error) {
+      console.error("Could not sync menu:", error);
+    }
+  }
+
+  window.addEventListener("storage", syncFoods);
+
+  return () => {
+    window.removeEventListener("storage", syncFoods);
   };
 }, []);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -409,9 +451,9 @@ function placeOrder() {
           Confirm Payment — ₹{total}
         </button>
 
-        <p className="small text-secondary text-center mt-3 mb-0">
+        {/* <p className="small text-secondary text-center mt-3 mb-0">
           Demo only. No real money will be charged.
-        </p>
+        </p> */}
       </div>
     </section>
   
@@ -449,8 +491,10 @@ function placeOrder() {
             </div>
 
             <div className="row g-3">
-              {initialFoods.map((food) => {
-                const cartItem = cart.find((item) => item.id === food.id);
+  {foods
+    .filter((food) => food.available !== false)
+    .map((food) => {
+      const cartItem = cart.find((item) => item.id === food.id);
                 return(
 
                 <div className="col-12 col-sm-6 col-lg-3" key={food.id}>
@@ -629,7 +673,9 @@ function placeOrder() {
 )}
 
 <div className="row g-2">
-  {orders.map((order) => (
+  {orders
+  .filter((order) => order.status !=="COMPLETED")
+  .map((order)=>(
     <div className="col-12 col-md-6 col-xl-4 col-xxl-3" key={order.id}>
       <div className="card border-0 shadow-sm h-100">
         <div className="card-body p-2 p-md-3 d-flex flex-column">

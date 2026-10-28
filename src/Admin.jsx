@@ -203,7 +203,7 @@ export default function Admin() {
     "Menu Management",
     "Orders",
     "Payments",
-    "People",
+    // "People",
   ];
 
   function resetForm() {
@@ -319,7 +319,7 @@ export default function Admin() {
             "Menu Management": "☷",
             Orders: "▤",
             Payments: "₹",
-            People: "♙",
+            // People: "♙",
           };
 
           return (
@@ -342,7 +342,7 @@ export default function Admin() {
 
         <div className="ob-admin-sidebar-bottom">
           {/* <div>● Demo admin workspace</div> */}
-          <a href="/">← Back to Customer</a>
+          <a href="/">← Customer view</a>
           <a href="/chef">Open Chef Interface →</a>
         </div>
       </aside>
@@ -373,7 +373,7 @@ export default function Admin() {
 
         {tab === "Overview" && (
           <>
-            <section className="ob-admin-welcome">
+            {/* <section className="ob-admin-welcome">
               <div>
                 <h2>Good day, Admin</h2>
                 <p>
@@ -381,20 +381,20 @@ export default function Admin() {
                   activity in one place.
                 </p>
               </div>
-            </section>
+            </section> */}
 
             <section className="ob-admin-stats">
               <Stat
                 icon="▤"
                 label="Total orders"
                 value={orders.length}
-                note="Orders stored in this browser"
+                // note="Orders stored in this browser"
               />
               <Stat
                 icon="₹"
                 label="Paid revenue"
                 value={formatMoney(paidRevenue)}
-                note="Orders marked PAID"
+                // note="Orders marked PAID"
               />
               <Stat
                 icon="☷"
@@ -404,12 +404,12 @@ export default function Admin() {
                   foods.filter((food) => food.available !== false).length
                 } available`}
               />
-              <Stat
+              {/* <Stat
                 icon="♙"
                 label="Customers"
                 value={customers.length}
                 note="Names found in orders"
-              />
+              /> */}
             </section>
 
             <section className="ob-admin-panel">
@@ -528,18 +528,76 @@ export default function Admin() {
                 </label>
 
                 <label>
-                  Image path (optional)
-                  <input
-                    value={form.image}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        image: event.target.value,
-                      })
-                    }
-                    placeholder="/food-image.png"
-                  />
-                </label>
+  Choose food image
+  <input
+    type="file"
+    accept="image/*"
+    onChange={(event) => {
+      const file = event.target.files?.[0];
+
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        setNotice("Please select a valid image file.");
+        event.target.value = "";
+        return;
+      }
+
+      // Keep the image small enough for browser storage.
+      if (file.size > 1024 * 1024) {
+        setNotice("Please select an image smaller than 1 MB.");
+        event.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setForm((currentForm) => ({
+            ...currentForm,
+            image: reader.result,
+          }));
+          setNotice("");
+        }
+      };
+
+      reader.onerror = () => {
+        setNotice("Unable to read the selected image.");
+      };
+
+      reader.readAsDataURL(file);
+    }}
+  />
+</label>
+
+{form.image && (
+  <div className="ob-admin-image-preview">
+    <p>Image preview</p>
+    <img
+      src={form.image}
+      alt="Selected food preview"
+      style={{
+        width: "120px",
+        height: "100px",
+        objectFit: "cover",
+        borderRadius: "10px",
+      }}
+    />
+    <button
+      type="button"
+      className="ob-admin-secondary"
+      onClick={() =>
+        setForm((currentForm) => ({
+          ...currentForm,
+          image: "",
+        }))
+      }
+    >
+      Remove image
+    </button>
+  </div>
+)}
 
                 <label className="ob-admin-check">
                   <input
@@ -671,8 +729,11 @@ export default function Admin() {
               title="All orders"
               subtitle="Order status and customer details"
             />
-            <OrderTable orders={orders.slice().reverse()} />
-          </section>
+<OrderTable
+  orders={orders
+    .slice()
+    .sort((a, b) => Number(b.id) - Number(a.id))}
+/>          </section>
         )}
 
         {tab === "Payments" && (
@@ -697,7 +758,7 @@ export default function Admin() {
                 <tbody>
                   {orders
                     .slice()
-                    .reverse()
+                    .sort((a, b) => Number(b.id) - Number(a.id))
                     .map((order, index) => (
                       <tr key={order.id ?? index}>
                         <td>#{order.id ?? "—"}</td>
@@ -763,11 +824,11 @@ export default function Admin() {
                 title="Chef / staff information"
                 subtitle="Staff directory"
               />
-              <p className="ob-admin-empty">
+              {/* <p className="ob-admin-empty">
                 The current demo does not store a separate staff
                 directory. Add a backend or staff list to manage chef
                 names and access securely.
-              </p>
+              </p> */}
               <a className="ob-admin-inline-link" href="/chef">
                 Open Chef Interface →
               </a>
@@ -775,10 +836,10 @@ export default function Admin() {
           </div>
         )}
 
-        <footer className="ob-admin-footer">
+        {/* <footer className="ob-admin-footer">
           OfficeBite Admin · Local demo data · Connect a backend for
           multi-user production use
-        </footer>
+        </footer> */}
       </main>
     </div>
   );
@@ -857,15 +918,22 @@ function OrderTable({ orders }) {
         <tbody>
           {orders.map((order, index) => {
             const items = Array.isArray(order.items)
+            ? order.items
+                .map((item) => {
+                  // Your customer interface saves items as strings.
+                  if (typeof item === "string") {
+                    return item;
+                  }
+          
+                  // Also support items saved as objects.
+                  return `${item.name || item.title || item.foodName || "Item"} × ${
+                    item.quantity || 1
+                  }`;
+                })
+                .join(", ")
+            : typeof order.items === "string"
               ? order.items
-                  .map(
-                    (item) =>
-                      `${item.name || item.title || "Item"} × ${
-                        item.quantity || 1
-                      }`
-                  )
-                  .join(", ")
-              : order.items || order.foodItems || "—";
+              : order.foodItems || "—";
 
             return (
               <tr key={order.id ?? index}>
